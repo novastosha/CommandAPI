@@ -227,7 +227,7 @@ public final class CommandManager {
             if (!(sender instanceof Player) && base.playerOnly()) {
                 return new ArrayList<>();
             }
-            return getCompletions(args, reducedNeededArguments, command, sender, subcommandsContainer);
+            return getCompletions(args, reducedNeededArguments, command, sender);
         });
     }
 
@@ -353,7 +353,7 @@ public final class CommandManager {
 
             int deepest = 0;
             if (subcommandsContainer.size() == 0) {
-                return getCompletions(args, orderedDefaultRunArguments, command, sender, subcommandsContainer);
+                return getCompletions(args, orderedDefaultRunArguments, command, sender);
             } else {
 
                 Map<Integer, List<Pair<String, SubcommandsContainer.ResolvedSubcommandGroupMeta>>> subcommandsMap = new HashMap<>();
@@ -382,6 +382,7 @@ public final class CommandManager {
                 SubcommandsContainer.ResolvedSubcommand subcommand = null;
 
                 StringBuilder groupFinder = new StringBuilder();
+
                 for (int i = 0; i < deepest; i++) {
                     if (args.length <= i) break;
 
@@ -393,13 +394,19 @@ public final class CommandManager {
                 }
 
                 StringBuilder cmdFinder = new StringBuilder();
+                String cmdFoundOn = "";
+
                 for (int i = 0; i <= deepest; i++) {
                     if (args.length <= i) break;
 
                     SubcommandsContainer.ResolvedSubcommand searchCommand = subcommandsContainer.getSubcommandMap().get(cmdFinder.toString());
-                    if (searchCommand != null) subcommand = searchCommand;
-
                     cmdFinder.append(i == 0 ? "" : " ").append(args[i]);
+
+                    if (searchCommand != null) {
+                        subcommand = searchCommand;
+                        cmdFoundOn = cmdFinder.toString();
+                    }
+
                     j = i;
                 }
 
@@ -420,7 +427,7 @@ public final class CommandManager {
                                     nameEquals = groupSub.getName().split(" ")[j - 1].equals(group.getName());
                                 }
 
-                                if(!nameEquals) continue;
+                                if (!nameEquals) continue;
                                 list.add(pair.getA());
                             }
                         }
@@ -429,21 +436,21 @@ public final class CommandManager {
                     return list;
                 }
 
+                j = cmdFoundOn.split(" ").length;
+                if(j % 2 == 0) j--;
+
                 String[] newArgs = new String[(args.length - j)];
-                System.out.println(args[j]);
                 System.arraycopy(args, j, newArgs, 0, args.length - j);
-                return getCompletions(newArgs, subcommand.getOrderedArguments(), command, sender, subcommandsContainer);
+
+                return getCompletions(newArgs, subcommand.getOrderedArguments(), command, sender);
             }
         };
     }
 
-    private List<String> getCompletions(String[] args, Argument[] arguments, ACommand command, CommandSender sender, SubcommandsContainer container) {
+    private List<String> getCompletions(String[] args, Argument[] arguments, ACommand command, CommandSender sender) {
         List<String> list = new ArrayList<>();
 
         Pair<Boolean, String[]> processed = process(args, arguments, sender);
-
-        System.out.println(processed.getA());
-
 
         String[] processedArgs = processed.getB();
         try {
@@ -466,8 +473,6 @@ public final class CommandManager {
             }
 
             String[] suggestions = generateArgumentInfo(argument, command, sender, last.equals(" ") || last.equals("") ? -1 : spaces, last.split(" "));
-
-            System.out.println("\"" + last + "\"");
 
             if (argument.type().equals(ArgumentType.TIMESTAMP) && last.equals(" ")) {
                 list.addAll(List.of(suggestions));
@@ -894,7 +899,6 @@ public final class CommandManager {
 
                         double x = ArgumentType.parseLocationValue("X", args[i], sender);
                         double y = ArgumentType.parseLocationValue("Y", args[i + 1], sender);
-                        System.out.println(args[i + 1]);
                         double z = ArgumentType.parseLocationValue("Z", args[i + 2], sender);
 
                         inc += 2;
@@ -928,9 +932,6 @@ public final class CommandManager {
                     Map<TimeStampType, Integer> timeMap = new HashMap<>();
 
                     StringBuilder timestampRaw = new StringBuilder();
-
-
-                    System.out.println(args[i]);
 
                     if (!args[i].startsWith("\"")) {
                         sender.sendMessage(ChatColor.RED + "Timestamps must be captured between double quotes (\")");
@@ -1070,8 +1071,6 @@ public final class CommandManager {
                         object = ((String) object).substring(0, ((String) object).length() - 1);
                     }
                 } else {
-
-                    System.out.println("arg i is: " + args[i]);
                     if (args.length - i + 1 < argument.type().maxArgs) {
                         sender.sendMessage(ChatColor.RED + "Not enough sub-arguments for: " + argument.name() + " (need: " + argument.type().maxArgs + " got: " + (args.length - i + 1) + ")");
                         return false;
@@ -1099,11 +1098,6 @@ public final class CommandManager {
             if (argument.required() && object == null) {
                 sender.sendMessage(ChatColor.RED + "Missing argument: " + argument.name());
                 return false;
-            }
-
-            System.out.println("Object is: " + object);
-            for (Object obj : getRawCompletions(argument, command, sender)) {
-                System.out.println("A: " + obj);
             }
 
             if (!getRawCompletions(argument, command, sender).isEmpty() && (!getRawCompletions(argument, command, sender).contains(object) && argument.completerSuggestionsRequired())) {
