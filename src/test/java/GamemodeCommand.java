@@ -14,16 +14,16 @@ import java.util.Map;
 @Command(name = "gamemode",playerOnly = true,permissions = "bukkit.gamemode",aliases = "gm")
 public class GamemodeCommand implements ACommand {
 
-    @CommandShortcut(value = "default",preRunName = "gms")
+    @CommandShortcut(value = "default", shortcutName = "gms")
     private final Map<String,Object> survivalPreRun = Map.of("gamemode",GameMode.SURVIVAL);
 
-    @CommandShortcut(value = "default",preRunName = "gmc")
+    @CommandShortcut(value = "default", shortcutName = "gmc")
     private final Map<String,Object> creativePreRun = Map.of("gamemode",GameMode.CREATIVE);
 
-    @CommandShortcut(value = "default",preRunName = "gma")
+    @CommandShortcut(value = "default", shortcutName = "gma")
     private final Map<String,Object> adventurePreRun = Map.of("gamemode",GameMode.ADVENTURE);
 
-    @CommandShortcut(value = "default",preRunName = "gmsp")
+    @CommandShortcut(value = "default", shortcutName = "gmsp")
     private final Map<String,Object> spectatorPreRun = Map.of("gamemode",GameMode.SPECTATOR);
 
     private final Class<GameMode> gamemode = GameMode.class;
