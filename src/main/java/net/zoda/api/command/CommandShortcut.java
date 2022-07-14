@@ -15,5 +15,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 public @interface CommandShortcut {
     String value();
-    String preRunName();
+    String shortcutName();
 }
