@@ -88,7 +88,6 @@ public class SubcommandsContainer {
             Argument[] orderedArguments = orderArguments(subcommand.arguments());
 
             if (!method.isAnnotationPresent(SubcommandGroups.class)) {
-                System.out.println("Its not present!");
                 if (commands.containsKey(subcommand.name())) {
                     logger.severe("Duplicate subcommand names! (" + subcommand.name() + ")");
                     break;
@@ -132,7 +131,6 @@ public class SubcommandsContainer {
 
                 if (!groupsMetaMap.containsKey(hierarchyName)) {
                     groupsMetaMap.put(hierarchyName, new ResolvedSubcommandGroupMeta(hierarchyName, new String[0]));
-                    logger.info("Created new fake subcommand group!");
                 }
 
                 commands.put(fullName, new GroupedResolvedSubcommand(groupsMetaMap.get(hierarchyName), subcommand, orderedArguments,method));
@@ -147,7 +145,6 @@ public class SubcommandsContainer {
 
         int index = 0;
         for (SubcommandGroup group : groups.value()) {
-            System.out.println(group.value());
             builder.append(index == 0 ? "" : " ").append(group.value());
             index++;
         }
