@@ -1,7 +1,5 @@
-name: ZodaCommandAPI
+name: CommandAPI
 main: net.zoda.api.command.plugin.CommandAPIPlugin
 version: 0.9.1
+author: novastosha
 api-version: 1.19
-commands:
-  gamemode:
-    description: Change your gamemode!
