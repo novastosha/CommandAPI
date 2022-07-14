@@ -48,8 +48,6 @@ public class SubcommandsContainer {
         this.logger = logger;
         this.base = base;
 
-        SubcommandGroupsMetaContainer subcommandGroupsMetaContainer = null;
-
         this.groupsMetaMap = findGroupsMeta();
         this.subcommandMap = findSubcommands(groupsMetaMap,command);
     }
@@ -193,9 +191,6 @@ public class SubcommandsContainer {
 
     public int size() {
         return subcommandMap.size();
-    }
-
-    public static class SubcommandGroupsMetaContainer {
     }
 
     @RequiredArgsConstructor
