@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 
 /**
  * MIT License
- *
+ * <p>
  * Copyright (c) 2022 S. S.
  */
 @SuppressWarnings("unchecked")
@@ -145,7 +145,7 @@ public final class CommandManager {
                     SubcommandsContainer.ResolvedSubcommand subcommand = subcommandsContainer.getSubcommandMap().get(shortcut.value());
 
                     if (subcommand == null) {
-                        logger.severe("Unknown subcommand of shortcut: " + shortcut.preRunName() + " (" + shortcut.value() + ")");
+                        logger.severe("Unknown subcommand of shortcut: " + shortcut.shortcutName() + " (" + shortcut.value() + ")");
                         continue;
                     }
 
@@ -158,7 +158,7 @@ public final class CommandManager {
 
 
                 if (!searchField.getType().equals(Map.class)) {
-                    logger.severe("Shortcut field type of: " + shortcut.preRunName() + " is not a map!");
+                    logger.severe("Shortcut field type of: " + shortcut.shortcutName() + " is not a map!");
                     continue;
                 }
 
@@ -168,13 +168,13 @@ public final class CommandManager {
 
 
                 if (!firstType.equals(String.class)) {
-                    logger.severe("Shortcut map of: " + shortcut.preRunName() + " Key generic is not String");
+                    logger.severe("Shortcut map of: " + shortcut.shortcutName() + " Key generic is not String");
                     continue;
                 }
 
 
                 if (!secondType.equals(Object.class)) {
-                    logger.severe("Shortcut map of: " + shortcut.preRunName() + " Key generic is not Object");
+                    logger.severe("Shortcut map of: " + shortcut.shortcutName() + " Key generic is not Object");
                     continue;
                 }
 
@@ -190,11 +190,11 @@ public final class CommandManager {
 
                         if (argument.type().equals(ArgumentType.ENUM)) {
                             if (!obj.getClass().isEnum()) {
-                                logger.severe("Shortcut argument type mismatch: " + shortcut.preRunName() + " (" + obj.getClass().getCanonicalName() + " is not an enum)");
+                                logger.severe("Shortcut argument type mismatch: " + shortcut.shortcutName() + " (" + obj.getClass().getCanonicalName() + " is not an enum)");
                                 continue loop;
                             }
                         } else if (!obj.getClass().isAssignableFrom(argument.type().clazz)) {
-                            logger.severe("Shortcut argument type mismatch: " + shortcut.preRunName() + " (expected: " + argument.type().clazz.getCanonicalName() + " got: " + obj.getClass().getCanonicalName() + ")");
+                            logger.severe("Shortcut argument type mismatch: " + shortcut.shortcutName() + " (expected: " + argument.type().clazz.getCanonicalName() + " got: " + obj.getClass().getCanonicalName() + ")");
                             continue loop;
                         }
 
@@ -208,11 +208,11 @@ public final class CommandManager {
                     CommandExecutor commandExecutor = buildShortcutLogic(base, arguments, argumentsMap, reducedNeededArguments, command, method, permissions);
                     TabCompleter tabCompletion = buildShortcutTabCompletion(base, subcommandsContainer, reducedNeededArguments, command);
 
-                    BukkitCommandWrapper.ShortcutWrapper shortCutBukkitCmd = new BukkitCommandWrapper.ShortcutWrapper(shortcut.preRunName(), commandExecutor, tabCompletion);
+                    BukkitCommandWrapper.ShortcutWrapper shortCutBukkitCmd = new BukkitCommandWrapper.ShortcutWrapper(shortcut.shortcutName(), commandExecutor, tabCompletion);
                     commandMap.register(plugin.getName(), shortCutBukkitCmd);
                     shortCutBukkitCmd.register(commandMap);
                 } catch (Exception ignored) {
-                    logger.severe("Couldn't build shortcut logic: " + shortcut.preRunName());
+                    logger.severe("Couldn't build shortcut logic: " + shortcut.shortcutName());
                 }
             }
         } catch (Exception e) {
@@ -351,78 +351,88 @@ public final class CommandManager {
                 return new ArrayList<>();
             }
 
+            int deepest = 0;
             if (subcommandsContainer.size() == 0) {
                 return getCompletions(args, orderedDefaultRunArguments, command, sender, subcommandsContainer);
             } else {
-                int deepest = 0;
-                Map<Integer, List<String>> mapped = new HashMap<>();
+
+                Map<Integer, List<Pair<String, SubcommandsContainer.ResolvedSubcommandGroupMeta>>> subcommandsMap = new HashMap<>();
 
                 for (String key : subcommandsContainer.getSubcommandMap().keySet()) {
-                    String[] split = key.split(" ");
-                    if (split.length > deepest) {
-                        deepest = split.length;
+                    String[] splitName = key.split(" ");
+
+                    if (splitName.length > deepest) {
+                        deepest = splitName.length;
                     }
 
-                    int j = 0;
-                    for (String splitRead : split) {
-                        List<String> str = mapped.getOrDefault(j, new ArrayList<>());
-                        str.add(splitRead);
+                    int i = 0;
+                    SubcommandsContainer.ResolvedSubcommand resolvedSubcommand = subcommandsContainer.getSubcommandMap().get(key);
 
-                        mapped.put(j, str);
-                        j++;
+                    for (String split : splitName) {
+                        List<Pair<String, SubcommandsContainer.ResolvedSubcommandGroupMeta>> list = subcommandsMap.getOrDefault(i, new ArrayList<>());
+                        list.add(new Pair<>(split, (resolvedSubcommand instanceof SubcommandsContainer.GroupedResolvedSubcommand groupedResolvedSubcommand) ? groupedResolvedSubcommand.getGroup() : null));
+
+                        subcommandsMap.put(i, list);
+                        i++;
                     }
                 }
 
-                StringBuilder builder = new StringBuilder();
-                SubcommandsContainer.ResolvedSubcommand resolvedSubcommand = null;
-
                 int j = 0;
+                SubcommandsContainer.ResolvedSubcommandGroupMeta group = null;
+                SubcommandsContainer.ResolvedSubcommand subcommand = null;
+
+                StringBuilder groupFinder = new StringBuilder();
                 for (int i = 0; i < deepest; i++) {
-                    if (i >= args.length) break;
+                    if (args.length <= i) break;
 
-                    builder.append(i == 0 ? "" : " ").append(args[i]);
+                    SubcommandsContainer.ResolvedSubcommandGroupMeta searchGroup = subcommandsContainer.getGroupsMetaMap().get(groupFinder.toString());
+                    if (searchGroup != null) group = searchGroup;
 
-                    if (i != 0) {
-                        if (!subcommandsContainer.getGroupsMetaMap().containsKey(args[i - 1])
-                                && !subcommandsContainer.getSubcommandMap().containsKey(builder.toString())
-                        ) {
-                            System.out.println("returned 2.0?");
-                            return new ArrayList<>();
-                        }
-                    }
-
-
-                    if (!subcommandsContainer.getSubcommandMap().containsKey(builder.toString())) {
-                        continue;
-                    }
-                    resolvedSubcommand = subcommandsContainer.getSubcommandMap().get(builder.toString());
-
+                    groupFinder.append(i == 0 ? "" : " ").append(args[i]);
                     j = i;
                 }
 
-                if (mapped.containsKey(args.length - 1) && resolvedSubcommand == null) {
-                    return mapped.get(args.length - 1);
+                StringBuilder cmdFinder = new StringBuilder();
+                for (int i = 0; i <= deepest; i++) {
+                    if (args.length <= i) break;
+
+                    SubcommandsContainer.ResolvedSubcommand searchCommand = subcommandsContainer.getSubcommandMap().get(cmdFinder.toString());
+                    if (searchCommand != null) subcommand = searchCommand;
+
+                    cmdFinder.append(i == 0 ? "" : " ").append(args[i]);
+                    j = i;
                 }
 
-                if (resolvedSubcommand == null) {
-                    System.out.println("returned?");
-                    return new ArrayList<>();
+                if (subcommand == null) {
+                    List<String> list = new ArrayList<>();
+
+                    if (subcommandsMap.containsKey(args.length - 1)) {
+                        for (Pair<String, SubcommandsContainer.ResolvedSubcommandGroupMeta> pair : subcommandsMap.get(args.length - 1)) {
+                            if (pair.getB() == null || args.length == 1) {
+                                list.add(pair.getA());
+                            } else {
+                                SubcommandsContainer.ResolvedSubcommandGroupMeta groupSub = pair.getB();
+
+                                if (group == null) continue;
+
+                                boolean nameEquals = groupSub.getName().equals(group.getName());
+                                if (!nameEquals) {
+                                    nameEquals = groupSub.getName().split(" ")[j - 1].equals(group.getName());
+                                }
+
+                                if(!nameEquals) continue;
+                                list.add(pair.getA());
+                            }
+                        }
+                    }
+
+                    return list;
                 }
-
-                j++;
-
-                System.out.println("Args length is: " + args.length);
-                System.out.println("Sub j: " + (args.length - j));
-                System.out.println("Sub j-1: " + (args.length - j - 1));
-                System.out.println("J is: " + j);
-
-                if (j == args.length) return new ArrayList<>();
 
                 String[] newArgs = new String[(args.length - j)];
                 System.out.println(args[j]);
                 System.arraycopy(args, j, newArgs, 0, args.length - j);
-
-                return getCompletions(newArgs, resolvedSubcommand.getOrderedArguments(), command, sender, subcommandsContainer);
+                return getCompletions(newArgs, subcommand.getOrderedArguments(), command, sender, subcommandsContainer);
             }
         };
     }
@@ -442,6 +452,11 @@ public final class CommandManager {
 
             Argument argument = arguments[processedArgs.length - 1];
 
+            if (processed.getA() && argument.type().equals(ArgumentType.STRING)
+                    && !(last.equals(" ") || last.equals(""))) {
+                return list;
+            }
+
 
             int spaces = 0;
 
@@ -450,7 +465,7 @@ public final class CommandManager {
                 spaces++;
             }
 
-            String[] suggestions = generateArgumentInfo(argument, command, sender, last.equals("") || argument.type().equals(ArgumentType.TIMESTAMP) ? -1 : spaces, last.split(" "));
+            String[] suggestions = generateArgumentInfo(argument, command, sender, last.equals(" ") || last.equals("") ? -1 : spaces, last.split(" "));
 
             System.out.println("\"" + last + "\"");
 
@@ -607,7 +622,7 @@ public final class CommandManager {
                     try {
                         Argument argument = arguments[strings.size()];
 
-                        if (!(argument.type().equals(ArgumentType.STRING) || argument.type().equals(ArgumentType.TIMESTAMP))) {
+                        if (!argument.type().equals(ArgumentType.TIMESTAMP)) {
                             for (int j = i; j < argument.type().maxArgs + i + 1 + (argument.type().equals(ArgumentType.LOCATION) && !(sender instanceof Player) ? 1 : 0); j++) {
                                 try {
                                     String arg = args[j];
@@ -839,7 +854,7 @@ public final class CommandManager {
 
         objects.put(0, sender);
 
-        if(!objectMap.isEmpty()) {
+        if (!objectMap.isEmpty()) {
             for (Map.Entry<Argument, Object> entry : objectMap.entrySet()) {
                 objects.put(List.of(arguments).indexOf(entry.getKey()) + 1, entry.getValue());
             }
@@ -1051,7 +1066,9 @@ public final class CommandManager {
                         builder.append(args[i].replaceFirst((args[i].startsWith("\"\"") ? "\"" : ""), ""));
                     }
                     object = builder.toString().replaceFirst("\"", "");
-                    object = ((String) object).substring(0, ((String) object).length() - 1);
+                    if (((String) object).contains(" ")) {
+                        object = ((String) object).substring(0, ((String) object).length() - 1);
+                    }
                 } else {
 
                     System.out.println("arg i is: " + args[i]);
