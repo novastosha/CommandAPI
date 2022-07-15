@@ -187,8 +187,14 @@ public enum ArgumentType {
             long minutes = seconds % 3600 / 60;
             long hours = seconds % 86400 / 3600;
             long days = seconds / 86400;
+            long months = seconds / (86400*30);
 
             StringBuilder builder = new StringBuilder();
+
+            if (months > 0) {
+                String length = months > 1 ? "months" : "month";
+                builder.append(months).append(" ").append(length).append(" ");
+            }
 
             if (days > 0) {
                 String length = days > 1 ? "days" : "day";
