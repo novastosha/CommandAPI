@@ -27,7 +27,7 @@ public enum ServerVersion {
 
             packageName = packageName.split("\\.")[3];
             packageName = packageName.substring(0, packageName.length() - 3); // removes the _R1 for example
-            packageName = packageName.substring(0, 3);
+            packageName = packageName.substring(2);
 
             try {
                 int parsed = Integer.parseInt(packageName);
