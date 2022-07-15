@@ -1,5 +1,6 @@
 package net.zoda.api.command.manager;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.zoda.api.command.ACommand;
 
@@ -814,7 +815,7 @@ public final class CommandManager {
     }
 
     @RequiredArgsConstructor
-    private enum TimeStampType {
+    public enum TimeStampType {
 
 
         MONTH(new String[]{"m", "month", "months"}, 2628000),
@@ -826,6 +827,7 @@ public final class CommandManager {
         static final String[] TYPES = new String[]{"month", "day", "hour", "minute", "second"};
 
         private final String[] aliases;
+        @Getter
         private final long multiply;
 
         public static Map<String, TimeStampType> getMapped() {
