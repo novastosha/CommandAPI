@@ -1,5 +1,5 @@
 name: CommandAPI
 main: net.zoda.api.command.plugin.CommandAPIPlugin
-version: 0.9.1
+version: 0.9.9
 author: novastosha
 api-version: 1.19
