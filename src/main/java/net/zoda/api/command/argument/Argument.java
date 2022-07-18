@@ -23,7 +23,7 @@ public @interface Argument {
     CompleterType completerType() default CompleterType.FIELD;
 
     boolean completerSuggestionsRequired() default true;
-
+    boolean disableCompletions() default false;
     boolean required() default true;
 
 }

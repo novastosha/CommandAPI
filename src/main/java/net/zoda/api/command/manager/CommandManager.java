@@ -460,6 +460,8 @@ public final class CommandManager {
 
             Argument argument = arguments[processedArgs.length - 1];
 
+            if(argument.disableCompletions()) return new ArrayList<>();
+
             if (processed.getA() && argument.type().equals(ArgumentType.STRING)
                     && !(last.equals(" ") || last.equals(""))) {
                 return list;
@@ -554,7 +556,7 @@ public final class CommandManager {
                     }
 
                     list.addAll(getAppropriateCompletion(spaces, custom));
-                } else if (argument.type().equals(ArgumentType.PLAYER)) {
+                } else if (argument.type().equals(ArgumentType.PLAYER) || argument.type().equals(ArgumentType.ANY_PLAYER)) {
                     for (Player player : sender.getServer().getOnlinePlayers()) {
                         list.add(player.getName());
                     }
