@@ -3,6 +3,7 @@ package net.zoda.api.command.argument;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
@@ -10,6 +11,7 @@ import org.bukkit.entity.Player;
 import java.util.Date;
 import java.util.IllegalFormatException;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * MIT License
@@ -160,6 +162,30 @@ public enum ArgumentType {
         public String stringify(CommandSender sender, Object object) {
             Rotation rotation = (Rotation) object;
             return rotation.yaw() + " " + rotation.pitch();
+        }
+    },
+
+    ANY_PLAYER(1, OfflinePlayer.class) {
+        @Override
+        public String stringify(CommandSender sender, Object object) {
+            return ((OfflinePlayer) object).getName();
+        }
+
+        @Override
+        public Object convert(String[] args, CommandSender sender) {
+            OfflinePlayer offlinePlayer;
+            try{
+                offlinePlayer = sender.getServer().getOfflinePlayer(UUID.fromString(args[0]));
+            }catch (Exception e) {
+                offlinePlayer = sender.getServer().getOfflinePlayerIfCached(args[0]);
+            }
+
+            if(offlinePlayer == null) {
+                sender.sendMessage(ChatColor.RED+"Couldn't find this player!");
+                return null;
+            }
+
+            return offlinePlayer;
         }
     },
     PLAYER(1, Player.class) {
