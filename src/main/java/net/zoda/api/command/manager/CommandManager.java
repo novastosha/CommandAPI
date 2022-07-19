@@ -112,9 +112,15 @@ public final class CommandManager {
 
         for (Field searchField : clazz.getDeclaredFields()) {
             if (!searchField.isAnnotationPresent(CommandRunCondition.class)) continue;
+            searchField.setAccessible(true);
             CommandRunCondition runCondition = searchField.getAnnotation(CommandRunCondition.class);
 
             String displayName = runCondition.value()[0].equalsIgnoreCase("*") ? "the command" : Arrays.toString(runCondition.value());
+
+            if(runCondition.value().length == 0) {
+                logger.severe(getInvalidSignature("run condition of: " + displayName,"condition targets nothing"));
+                return;
+            }
 
             if (!searchField.getType().equals(Function.class)) {
                 logger.severe(getInvalidSignature("run condition of: " + displayName, "field isn't a Function"));
