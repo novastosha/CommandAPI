@@ -2,11 +2,9 @@ package net.zoda.api.command.manager;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import net.zoda.api.command.ACommand;
+import net.zoda.api.command.*;
 
 import net.zoda.api.command.Command;
-import net.zoda.api.command.CommandShortcut;
-import net.zoda.api.command.DefaultRun;
 import net.zoda.api.command.argument.Argument;
 import net.zoda.api.command.argument.ArgumentType;
 import net.zoda.api.command.manager.containers.SubcommandsContainer;
@@ -44,6 +42,24 @@ public final class CommandManager {
     public static CommandManager getInstance() {
         if (instance == null) instance = new CommandManager();
         return instance;
+    }
+
+    public <T extends CommandSender> boolean checkRunCondition(String forCommand, ACommand command, T sender) {
+        Class<? extends ACommand> clazz = command.getClass();
+
+        for (Field searchField : clazz.getDeclaredFields()) {
+            if (!searchField.isAnnotationPresent(CommandRunCondition.class)) continue;
+            CommandRunCondition runCondition = searchField.getAnnotation(CommandRunCondition.class);
+
+            if (!runCondition.value().equalsIgnoreCase("*") && !runCondition.value().equals(forCommand)) continue;
+            try {
+                if (!((Function<T, Boolean>) searchField.get(command)).apply((sender))) return false;
+            } catch (IllegalAccessException ignored) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public void registerCommand(ACommand command, JavaPlugin plugin) {
@@ -93,6 +109,39 @@ public final class CommandManager {
         if (orderedDefaultRunArguments.length != 0 && subcommandsContainer.size() != 0) {
             logger.severe(getInvalidSignature(base.name(), "a default run method cannot have any arguments if any subcommand is present"));
         }
+
+        for (Field searchField : clazz.getDeclaredFields()) {
+            if (!searchField.isAnnotationPresent(CommandRunCondition.class)) continue;
+            CommandRunCondition runCondition = searchField.getAnnotation(CommandRunCondition.class);
+
+            String displayName = runCondition.value().equalsIgnoreCase("*") ? "the command" : runCondition.value();
+
+            if (!searchField.getType().equals(Function.class)) {
+                logger.severe(getInvalidSignature("run condition of: " + displayName, "field isn't a Function"));
+                return;
+            }
+
+            ParameterizedType type = (ParameterizedType) searchField.getGenericType();
+
+            Class<?> firstClass = (Class<?>) type.getActualTypeArguments()[0];
+            Class<?> secondClass = (Class<?>) type.getActualTypeArguments()[1];
+
+            if (!firstClass.equals(Player.class) && !firstClass.equals(CommandSender.class)) {
+                logger.severe(getInvalidSignature("run condition of: " + displayName, "first parameter is neither a Player or a CommandSender"));
+                return;
+            }
+
+            if (firstClass.equals(Player.class) && !base.playerOnly()) {
+                logger.severe(getInvalidSignature("run condition of: " + displayName, "non-player-only commands cannot supply Player type"));
+                return;
+            }
+
+            if (!secondClass.equals(Boolean.class)) {
+                logger.severe(getInvalidSignature("run condition of: " + displayName, "second parameter is not a boolean!"));
+                return;
+            }
+        }
+
 
         try {
 
@@ -281,6 +330,7 @@ public final class CommandManager {
             }
 
             if (subcommandsContainer.size() == 0 || args.length == 0) {
+                if(!checkRunCondition("default",aCommand,sender)) return true;
                 return attemptResolveAndRun(sender, orderedDefaultRunArguments, args, defaultMethod, aCommand);
             } else {
 
@@ -340,6 +390,7 @@ public final class CommandManager {
                     return true;
                 }
 
+                if(!checkRunCondition(subName,aCommand,sender)) return true;
                 return attemptResolveAndRun(sender, resolvedSubcommand.getOrderedArguments(), newArgs, resolvedSubcommand.getMethod(), aCommand);
             }
         };
@@ -438,7 +489,7 @@ public final class CommandManager {
                 }
 
                 j = cmdFoundOn.split(" ").length;
-                if(j % 2 == 0) j--;
+                if (j % 2 == 0) j--;
 
                 String[] newArgs = new String[(args.length - j)];
                 System.arraycopy(args, j, newArgs, 0, args.length - j);
@@ -460,7 +511,7 @@ public final class CommandManager {
 
             Argument argument = arguments[processedArgs.length - 1];
 
-            if(argument.disableCompletions()) return new ArrayList<>();
+            if (argument.disableCompletions()) return new ArrayList<>();
 
             if (processed.getA() && argument.type().equals(ArgumentType.STRING)
                     && !(last.equals(" ") || last.equals(""))) {
