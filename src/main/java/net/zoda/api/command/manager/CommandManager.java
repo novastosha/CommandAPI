@@ -51,7 +51,7 @@ public final class CommandManager {
             if (!searchField.isAnnotationPresent(CommandRunCondition.class)) continue;
             CommandRunCondition runCondition = searchField.getAnnotation(CommandRunCondition.class);
 
-            if (!runCondition.value().equalsIgnoreCase("*") && !runCondition.value().equals(forCommand)) continue;
+            if (!runCondition.value()[0].equalsIgnoreCase("*") && !List.of(runCondition.value()).contains(forCommand)) continue;
             try {
                 if (!((Function<T, Boolean>) searchField.get(command)).apply((sender))) return false;
             } catch (IllegalAccessException ignored) {
@@ -114,7 +114,7 @@ public final class CommandManager {
             if (!searchField.isAnnotationPresent(CommandRunCondition.class)) continue;
             CommandRunCondition runCondition = searchField.getAnnotation(CommandRunCondition.class);
 
-            String displayName = runCondition.value().equalsIgnoreCase("*") ? "the command" : runCondition.value();
+            String displayName = runCondition.value()[0].equalsIgnoreCase("*") ? "the command" : Arrays.toString(runCondition.value());
 
             if (!searchField.getType().equals(Function.class)) {
                 logger.severe(getInvalidSignature("run condition of: " + displayName, "field isn't a Function"));
