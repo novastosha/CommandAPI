@@ -87,7 +87,7 @@ public class SubcommandsContainer {
 
             Argument[] orderedArguments = orderArguments(subcommand.arguments());
 
-            if (!method.isAnnotationPresent(SubcommandGroups.class)) {
+            if (!method.isAnnotationPresent(SubcommandGroups.class) || !method.isAnnotationPresent(SubcommandGroup.class)) {
                 if (commands.containsKey(subcommand.name())) {
                     logger.severe("Duplicate subcommand names! (" + subcommand.name() + ")");
                     break;
@@ -95,7 +95,21 @@ public class SubcommandsContainer {
 
                 commands.put(subcommand.name(), new ResolvedSubcommand(subcommand, orderedArguments,method));
             } else {
-                SubcommandGroups groups = method.getAnnotation(SubcommandGroups.class);
+                ArrayList<String> groups = new ArrayList<>();
+
+                if(method.isAnnotationPresent(SubcommandGroup.class)) {
+                    for(SubcommandGroup group : method.getAnnotationsByType(SubcommandGroup.class)) {
+                        groups.add(group.value());
+                    }
+                }
+
+                if (method.isAnnotationPresent(SubcommandGroups.class)) {
+                    SubcommandGroups subcommandGroups = method.getAnnotation(SubcommandGroups.class);
+
+                    for(SubcommandGroup group : subcommandGroups.value()) {
+                        groups.add(group.value());
+                    }
+                }
 
                 String fullName = getHierarchy(groups)+" "+subcommand.name();
 
@@ -104,21 +118,21 @@ public class SubcommandsContainer {
                     break;
                 }
 
-                if (groups.value().length > 1) {
-                    for (SubcommandGroup group : groups.value()) {
+                if (groups.size() > 1) {
+                    for (String group : groups) {
 
-                        if(!groupsMetaMap.containsKey(group.value())) {
-                            groupsMetaMap.put(group.value(), new ResolvedSubcommandGroupMeta(group.value(), new String[0]));
+                        if(!groupsMetaMap.containsKey(group)) {
+                            groupsMetaMap.put(group, new ResolvedSubcommandGroupMeta(group, new String[0]));
 
                         }
                         //Skip last group
-                        if (groups.value()[groups.value().length-1] == group) continue;
+                        if (groups.get(groups.size() - 1).equals(group)) continue;
 
                         for (ResolvedSubcommand resolvedSubcommand : commands.values()) {
                             if (!(resolvedSubcommand instanceof GroupedResolvedSubcommand groupedResolvedSubcommand))
                                 continue;
 
-                            if (group.value().equals(groupedResolvedSubcommand.group.name)) {
+                            if (group.equals(groupedResolvedSubcommand.group.name)) {
                                 logger.severe("A multi-level subcommand group cannot have subcommands! (Argument parsing limitation)");
                                 commands.clear();
                                 break;
@@ -140,12 +154,12 @@ public class SubcommandsContainer {
         return commands;
     }
 
-    private String getHierarchy(SubcommandGroups groups) {
+    private String getHierarchy(ArrayList<String> groups) {
         StringBuilder builder = new StringBuilder();
 
         int index = 0;
-        for (SubcommandGroup group : groups.value()) {
-            builder.append(index == 0 ? "" : " ").append(group.value());
+        for (String group : groups) {
+            builder.append(index == 0 ? "" : " ").append(group);
             index++;
         }
 
@@ -154,8 +168,17 @@ public class SubcommandsContainer {
 
     private Map<String, ResolvedSubcommandGroupMeta> findGroupsMeta() {
         Map<String, ResolvedSubcommandGroupMeta> map = new HashMap<>();
-        if (!clazz.isAnnotationPresent(SubcommandGroupsMeta.class)) return map;
+        if (!clazz.isAnnotationPresent(SubcommandGroupsMeta.class) && !clazz.isAnnotationPresent(SubcommandGroupMeta.class)) return map;
 
+        ArrayList<SubcommandGroupMeta> groupMetas = new ArrayList<>();
+
+        if(clazz.isAnnotationPresent(SubcommandGroupsMeta.class)) {
+            groupMetas.addAll(List.of(clazz.getAnnotation(SubcommandGroupsMeta.class).value()));
+        }
+
+        if(clazz.isAnnotationPresent(SubcommandGroupMeta.class)) {
+            groupMetas.addAll(List.of(clazz.getAnnotationsByType(SubcommandGroupMeta.class)));
+        }
 
         for (SubcommandGroupMeta meta : clazz.getAnnotation(SubcommandGroupsMeta.class).value()) {
             if (meta.value().split(" ").length > 1) {
