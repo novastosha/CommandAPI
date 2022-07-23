@@ -106,10 +106,19 @@ public enum ArgumentType {
         @Override
         public String stringify(CommandSender sender, Object object) {
 
-            Location loc = (Location) object;
-            boolean append_rotation = loc.getYaw() == 0 && loc.getYaw() == 0;
+            double x = 0,y = 0,z = 0;
 
-            return loc.getX() + " " + loc.getY() + " " + loc.getZ() + (append_rotation ? " " + loc.getYaw() + " " + loc.getPitch() : "");
+            if(object instanceof ArgumentLocation defaultLocation) {
+                x = defaultLocation.x();
+                y = defaultLocation.y();
+                z = defaultLocation.z();
+            }else if(object instanceof Location bukkitLocation) {
+                x = bukkitLocation.getX();
+                y = bukkitLocation.getY();
+                z = bukkitLocation.getZ();
+            }
+
+            return x + " " + y + " " + z;
         }
     },
     ROTATION(2, Rotation.class) {
