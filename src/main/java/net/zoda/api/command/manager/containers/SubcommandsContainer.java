@@ -26,7 +26,7 @@ import static net.zoda.api.command.manager.CommandManager.getArguments;
 
 /**
  * MIT License
- *
+ * <p>
  * Copyright (c) 2022 S. S.
  */
 public class SubcommandsContainer {
@@ -43,37 +43,24 @@ public class SubcommandsContainer {
     private final Map<String, ResolvedSubcommandGroupMeta> groupsMetaMap;
 
 
-    public SubcommandsContainer(Class<? extends ACommand> clazz, Command base, Logger logger,ACommand command) {
+    public SubcommandsContainer(Class<? extends ACommand> clazz, Command base, Logger logger, ACommand command) {
         this.clazz = clazz;
         this.logger = logger;
         this.base = base;
 
         this.groupsMetaMap = findGroupsMeta();
-        this.subcommandMap = findSubcommands(groupsMetaMap,command);
+        this.subcommandMap = findSubcommands(groupsMetaMap, command);
     }
 
     public static Member findCompleter(Argument argument, Class<? extends ACommand> command) {
-        if (argument.completer().isBlank() || argument.completer().isEmpty()) {
+        if (argument.completer().isBlank() && argument.completer().isEmpty()) {
             return attemptFindCompleter(command, argument.name());
         } else {
-            Member field = attemptFindCompleter(command, argument.completer());
-
-            if (field == null && argument.completerType().equals(CompleterType.FIELD)) {
-                try {
-                    return command.getDeclaredField(argument.completer());
-                } catch (NoSuchFieldException ignored) {
-                }
-            } else if (field == null && argument.completerType().equals(CompleterType.METHOD)) {
-                try {
-                    return command.getDeclaredMethod(argument.completer());
-                } catch (NoSuchMethodException ignored) {
-                }
-            }
-            return null;
+            return attemptFindCompleter(command, argument.completer());
         }
     }
 
-    private Map<String, ResolvedSubcommand> findSubcommands(Map<String, ResolvedSubcommandGroupMeta> groupsMetaMap,ACommand command) {
+    private Map<String, ResolvedSubcommand> findSubcommands(Map<String, ResolvedSubcommandGroupMeta> groupsMetaMap, ACommand command) {
         Map<String, ResolvedSubcommand> commands = new HashMap<>();
 
         for (Method method : clazz.getDeclaredMethods()) {
@@ -82,23 +69,25 @@ public class SubcommandsContainer {
             Subcommand subcommand = method.getAnnotation(Subcommand.class);
 
 
-            if (!CommandManager.verifyArguments(subcommand.arguments(), clazz, subcommand.name(), base.playerOnly(),logger)) continue;
-            if (!CommandManager.verifySignature(subcommand.arguments(), method, subcommand.name(), base.playerOnly(),logger,command)) continue;
+            if (!CommandManager.verifyArguments(subcommand.arguments(), clazz, subcommand.name(), base.playerOnly(), logger))
+                continue;
+            if (!CommandManager.verifySignature(subcommand.arguments(), method, subcommand.name(), base.playerOnly(), logger, command))
+                continue;
 
             Argument[] orderedArguments = orderArguments(subcommand.arguments());
 
-            if (!method.isAnnotationPresent(SubcommandGroups.class) || !method.isAnnotationPresent(SubcommandGroup.class)) {
+            if (!method.isAnnotationPresent(SubcommandGroups.class) && !method.isAnnotationPresent(SubcommandGroup.class)) {
                 if (commands.containsKey(subcommand.name())) {
                     logger.severe("Duplicate subcommand names! (" + subcommand.name() + ")");
                     break;
                 }
 
-                commands.put(subcommand.name(), new ResolvedSubcommand(subcommand, orderedArguments,method));
+                commands.put(subcommand.name(), new ResolvedSubcommand(subcommand, orderedArguments, method));
             } else {
                 ArrayList<String> groups = new ArrayList<>();
 
-                if(method.isAnnotationPresent(SubcommandGroup.class)) {
-                    for(SubcommandGroup group : method.getAnnotationsByType(SubcommandGroup.class)) {
+                if (method.isAnnotationPresent(SubcommandGroup.class)) {
+                    for (SubcommandGroup group : method.getAnnotationsByType(SubcommandGroup.class)) {
                         groups.add(group.value());
                     }
                 }
@@ -106,12 +95,12 @@ public class SubcommandsContainer {
                 if (method.isAnnotationPresent(SubcommandGroups.class)) {
                     SubcommandGroups subcommandGroups = method.getAnnotation(SubcommandGroups.class);
 
-                    for(SubcommandGroup group : subcommandGroups.value()) {
+                    for (SubcommandGroup group : subcommandGroups.value()) {
                         groups.add(group.value());
                     }
                 }
 
-                String fullName = getHierarchy(groups)+" "+subcommand.name();
+                String fullName = getHierarchy(groups) + " " + subcommand.name();
 
                 if (commands.containsKey(fullName)) {
                     logger.severe("Duplicate subcommand names! (" + fullName + ")");
@@ -121,22 +110,9 @@ public class SubcommandsContainer {
                 if (groups.size() > 1) {
                     for (String group : groups) {
 
-                        if(!groupsMetaMap.containsKey(group)) {
+                        if (!groupsMetaMap.containsKey(group)) {
                             groupsMetaMap.put(group, new ResolvedSubcommandGroupMeta(group, new String[0]));
 
-                        }
-                        //Skip last group
-                        if (groups.get(groups.size() - 1).equals(group)) continue;
-
-                        for (ResolvedSubcommand resolvedSubcommand : commands.values()) {
-                            if (!(resolvedSubcommand instanceof GroupedResolvedSubcommand groupedResolvedSubcommand))
-                                continue;
-
-                            if (group.equals(groupedResolvedSubcommand.group.name)) {
-                                logger.severe("A multi-level subcommand group cannot have subcommands! (Argument parsing limitation)");
-                                commands.clear();
-                                break;
-                            }
                         }
                     }
                 }
@@ -147,7 +123,7 @@ public class SubcommandsContainer {
                     groupsMetaMap.put(hierarchyName, new ResolvedSubcommandGroupMeta(hierarchyName, new String[0]));
                 }
 
-                commands.put(fullName, new GroupedResolvedSubcommand(groupsMetaMap.get(hierarchyName), subcommand, orderedArguments,method));
+                commands.put(fullName, new GroupedResolvedSubcommand(groupsMetaMap.get(hierarchyName), subcommand, orderedArguments, method));
             }
         }
 
@@ -168,15 +144,16 @@ public class SubcommandsContainer {
 
     private Map<String, ResolvedSubcommandGroupMeta> findGroupsMeta() {
         Map<String, ResolvedSubcommandGroupMeta> map = new HashMap<>();
-        if (!clazz.isAnnotationPresent(SubcommandGroupsMeta.class) && !clazz.isAnnotationPresent(SubcommandGroupMeta.class)) return map;
+        if (!clazz.isAnnotationPresent(SubcommandGroupsMeta.class) && !clazz.isAnnotationPresent(SubcommandGroupMeta.class))
+            return map;
 
         ArrayList<SubcommandGroupMeta> groupMetas = new ArrayList<>();
 
-        if(clazz.isAnnotationPresent(SubcommandGroupsMeta.class)) {
+        if (clazz.isAnnotationPresent(SubcommandGroupsMeta.class)) {
             groupMetas.addAll(List.of(clazz.getAnnotation(SubcommandGroupsMeta.class).value()));
         }
 
-        if(clazz.isAnnotationPresent(SubcommandGroupMeta.class)) {
+        if (clazz.isAnnotationPresent(SubcommandGroupMeta.class)) {
             groupMetas.addAll(List.of(clazz.getAnnotationsByType(SubcommandGroupMeta.class)));
         }
 
@@ -187,19 +164,19 @@ public class SubcommandsContainer {
                 List<String> permissions = new ArrayList<>();
 
                 for (String s : split) {
-                    if(s.equals(split[split.length-1])) continue;
+                    if (s.equals(split[split.length - 1])) continue;
 
-                    if(map.containsKey(s)) {
+                    if (map.containsKey(s)) {
                         permissions.addAll(List.of(map.get(s).permissions));
-                    }else{
-                        map.put(s,new ResolvedSubcommandGroupMeta(s,new String[0]));
+                    } else {
+                        map.put(s, new ResolvedSubcommandGroupMeta(s, new String[0]));
                     }
 
 
                 }
                 permissions.addAll(List.of(meta.permissions()));
 
-                map.put(meta.value(),new ResolvedSubcommandGroupMeta(meta.value(),permissions.toArray(new String[0])));
+                map.put(meta.value(), new ResolvedSubcommandGroupMeta(meta.value(), permissions.toArray(new String[0])));
             } else {
                 map.put(meta.value(), new ResolvedSubcommandGroupMeta(meta));
             }
@@ -228,10 +205,11 @@ public class SubcommandsContainer {
     public static class GroupedResolvedSubcommand extends ResolvedSubcommand {
 
 
-        @Getter private final ResolvedSubcommandGroupMeta group;
+        @Getter
+        private final ResolvedSubcommandGroupMeta group;
 
-        public GroupedResolvedSubcommand(ResolvedSubcommandGroupMeta groups, Subcommand subcommand, Argument[] orderedArguments,Method method) {
-            super(subcommand, orderedArguments,method);
+        public GroupedResolvedSubcommand(ResolvedSubcommandGroupMeta groups, Subcommand subcommand, Argument[] orderedArguments, Method method) {
+            super(subcommand, orderedArguments, method);
             this.group = groups;
         }
     }
@@ -239,11 +217,6 @@ public class SubcommandsContainer {
     public static Argument[] orderArguments(Argument[] arguments) {
         return getArguments(arguments);
     }
-
-    public static String getInvalidSignature(String name, String reason) {
-        return "Invalid signature of: " + name + " (" + reason + ")";
-    }
-
 
     public static Member attemptFindCompleter(Class<? extends ACommand> command, String search) {
         try {
