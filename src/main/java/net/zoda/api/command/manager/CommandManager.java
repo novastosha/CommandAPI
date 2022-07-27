@@ -49,9 +49,11 @@ public final class CommandManager {
 
         for (Field searchField : clazz.getDeclaredFields()) {
             if (!searchField.isAnnotationPresent(CommandRunCondition.class)) continue;
+            searchField.setAccessible(true);
             CommandRunCondition runCondition = searchField.getAnnotation(CommandRunCondition.class);
 
-            if (!runCondition.value()[0].equalsIgnoreCase("*") && !List.of(runCondition.value()).contains(forCommand)) continue;
+            if (!runCondition.value()[0].equalsIgnoreCase("*") && !List.of(runCondition.value()).contains(forCommand))
+                continue;
             try {
                 if (!((Function<T, Boolean>) searchField.get(command)).apply((sender))) return false;
             } catch (IllegalAccessException ignored) {
@@ -61,6 +63,11 @@ public final class CommandManager {
 
         return true;
     }
+
+   public void registerCommands(JavaPlugin plugin, ACommand command, ACommand... commands) {
+        registerCommand(command,plugin);
+        Arrays.stream(commands).forEach(command1 -> registerCommand(command1,plugin));
+   }
 
     public void registerCommand(ACommand command, JavaPlugin plugin) {
         Class<? extends ACommand> clazz = command.getClass();
@@ -117,8 +124,8 @@ public final class CommandManager {
 
             String displayName = runCondition.value()[0].equalsIgnoreCase("*") ? "the command" : Arrays.toString(runCondition.value());
 
-            if(runCondition.value().length == 0) {
-                logger.severe(getInvalidSignature("run condition of: " + displayName,"condition targets nothing"));
+            if (runCondition.value().length == 0) {
+                logger.severe(getInvalidSignature("run condition of: " + displayName, "condition targets nothing"));
                 return;
             }
 
@@ -336,7 +343,7 @@ public final class CommandManager {
             }
 
             if (subcommandsContainer.size() == 0 || args.length == 0) {
-                if(!checkRunCondition("default",aCommand,sender)) return true;
+                if (!checkRunCondition("default", aCommand, sender)) return true;
                 return attemptResolveAndRun(sender, orderedDefaultRunArguments, args, defaultMethod, aCommand);
             } else {
 
@@ -396,7 +403,8 @@ public final class CommandManager {
                     return true;
                 }
 
-                if(!checkRunCondition(subName,aCommand,sender)) return true;
+                if (!checkRunCondition((resolvedSubcommandGroupMeta != null ? resolvedSubcommandGroupMeta.getName() + " " : "") + subName, aCommand, sender))
+                    return true;
                 return attemptResolveAndRun(sender, resolvedSubcommand.getOrderedArguments(), newArgs, resolvedSubcommand.getMethod(), aCommand);
             }
         };
